@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Surat Online Desa",
+  "description": "Sistem pelayanan mandiri surat online desa berbasis template dokumen dengan TTE, QR Code, pratinjau real-time, dan dashboard admin terpadu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
