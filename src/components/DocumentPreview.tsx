@@ -1,5 +1,7 @@
-import React from 'react';
-import { Printer } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Download, Loader2 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { PengajuanSurat, JenisSurat } from '../types';
 
 interface DocumentPreviewProps {
@@ -9,6 +11,53 @@ interface DocumentPreviewProps {
 }
 
 export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ submission, template, previewHtml }) => {
+  const [isExporting, setIsExporting] = useState(false);
+
+  const exportToPDF = async () => {
+    const element = document.getElementById('village-doc-canvas');
+    if (!element) return;
+
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const docName = template ? `${template.kode_surat}_${submission.id || 'Draft'}.pdf` : 'surat.pdf';
+      pdf.save(docName);
+    } catch (error) {
+      console.error('Gagal mengekspor PDF:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Local fallback parser if previewHtml is not provided yet (for real-time typing preview)
   const renderLocalHtml = () => {
     if (!template) return '<p class="text-[#8C8170] italic text-center py-12">Pilih jenis surat untuk melihat pratinjau</p>';
@@ -79,6 +128,20 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({ submission, te
         >
           <Printer className="w-3.5 h-3.5 text-[#1C1A17]" />
           Cetak Surat
+        </button>
+
+        <button
+          onClick={exportToPDF}
+          disabled={isExporting}
+          className="bg-white hover:bg-[#FAF9F5] text-[#1C1A17] border border-[#E5E1DA] rounded px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition cursor-pointer hover:border-[#1C1A17] disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Unduh Berkas PDF Resmi (A4)"
+        >
+          {isExporting ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#8C8170]" />
+          ) : (
+            <Download className="w-3.5 h-3.5 text-[#1C1A17]" />
+          )}
+          {isExporting ? 'Mengekspor...' : 'Unduh PDF'}
         </button>
 
         {submission.status === 'selesai' && (
